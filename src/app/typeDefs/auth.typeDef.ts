@@ -1,15 +1,17 @@
 const authTypeDef = `#graphql
     type Mutation {
-        register(name: String!, password: String!, email: String!): User
+        register(name: String!, password: String!, email: String!): AuthPayload
+    }
+
+    type AuthPayload {
+        access_token: String!
+        user: User!
     }
 
     type User {
         id: ID!
         name: String
         email: String
-        password: String
-        createdAt: String
-        updatedAt: String
     }
 `;
 

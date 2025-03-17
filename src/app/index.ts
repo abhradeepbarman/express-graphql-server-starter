@@ -1,11 +1,18 @@
 import { ApolloServer } from "@apollo/server";
+import { expressMiddleware } from "@apollo/server/express4";
 import cors, { type CorsRequest } from "cors";
 import express, { type Application } from "express";
+import jwt from "jsonwebtoken";
 import type { GraphQLContext } from "../@types/context.types";
-import mergedTypeDefs from "./typeDefs";
-import mergedResolvers from "./resolvers";
-import { expressMiddleware } from "@apollo/server/express4";
 import { formatError } from "../middlewares/errorHandler";
+import mergedResolvers from "./resolvers";
+import mergedTypeDefs from "./typeDefs";
+import { config } from "../config/config";
+import { db } from "../db";
+import { eq } from "drizzle-orm";
+import { users } from "../db/schema";
+import GraphQLErrors from "../utils/errorHandler";
+import { getUserFromToken } from "./controllers/auth.controller";
 
 export const initServer = async (): Promise<Application> => {
     const app = express();
@@ -21,7 +28,7 @@ export const initServer = async (): Promise<Application> => {
     const graphqlServer = new ApolloServer<GraphQLContext>({
         typeDefs: mergedTypeDefs,
         resolvers: mergedResolvers,
-        formatError: formatError
+        formatError,
     });
 
     await graphqlServer.start();
@@ -31,7 +38,11 @@ export const initServer = async (): Promise<Application> => {
         cors<CorsRequest>(),
         express.json(),
         expressMiddleware(graphqlServer, {
-            context: async ({ req }) => ({ user: undefined }),
+            context: async ({ req }) => {
+                const token = req.headers.authorization?.split(" ")[1];
+                const user = await getUserFromToken(token);
+                return { user };
+            },
         })
     );
 
